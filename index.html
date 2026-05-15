@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+   PD 스튜디오 리다이렉트 페이지
+   GitHub Pages용 — 사용자를 클로드 아티팩트로 즉시 이동시킴
+
+   사용법:
+   1. life2radio.github.io 저장소에 'pd' 같은 폴더를 만든다
+   2. 이 파일을 그 폴더에 index.html로 넣는다 → life2radio.github.io/pd 로 접근 가능
+   3. 아래 TARGET_URL 한 줄만 게시된 클로드 아티팩트 URL로 바꾼다
+   4. 앱이 업데이트돼서 URL이 바뀌면 → 이 한 줄만 갱신하고 commit
+
+   제작: 파고드림
+  ============================================================
+-->
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>나도 PD 있다 · PD 스튜디오</title>
+  <meta name="description" content="1인 콘텐츠 창작자를 위한 무료 AI 도구. 파고드림 제작.">
+
+  <!-- ↓↓↓ 이 한 줄만 바꾸면 됩니다. 게시한 클로드 아티팩트 URL을 넣어주세요 ↓↓↓ -->
+  <script>const TARGET_URL = 'https://claude.ai/public/artifacts/REPLACE-WITH-YOUR-ARTIFACT-ID';</script>
+  <!-- ↑↑↑ 이 한 줄만 바꾸면 됩니다 ↑↑↑ -->
+
+  <script>
+    // 즉시 리다이렉트 (사용자가 멈춤을 거의 못 느낌)
+    window.location.replace(TARGET_URL);
+  </script>
+  <!-- JavaScript가 막힌 경우의 폴백 -->
+  <meta http-equiv="refresh" content="0; url=https://claude.ai/public/artifacts/REPLACE-WITH-YOUR-ARTIFACT-ID">
+
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #FAF5EA;
+      color: #2A1810;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+      text-align: center;
+      padding: 1rem;
+    }
+    .box {
+      max-width: 400px;
+    }
+    .spin {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(184,92,56,0.2);
+      border-top-color: #B85C38;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h1 { font-size: 1.15rem; color: #B85C38; margin: 0 0 0.5rem; }
+    p { font-size: 0.88rem; color: #5C4A3A; line-height: 1.6; margin: 0 0 1rem; }
+    a { color: #B85C38; font-weight: 700; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="spin"></div>
+    <h1>🎙 PD 스튜디오로 이동 중…</h1>
+    <p>잠시 후 자동으로 앱이 열려요.<br>이동되지 않으면 <a id="manual" href="#">여기를 눌러주세요</a></p>
+  </div>
+  <script>
+    // 수동 링크에 동일한 TARGET_URL 연결 (HTML 작성 시점에 변수 사용)
+    document.getElementById('manual').href = TARGET_URL;
+  </script>
+</body>
+</html>
