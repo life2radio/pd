@@ -2,10 +2,9 @@
 <!--
   PD 스튜디오 — GitHub Pages PWA 게이트 페이지
   
-  앱 본체는 Claude artifact에 있고, 이 페이지는 *PWA 설치 가능한 게이트*.
-  - 처음 접속한 사용자: 자동으로 "홈 화면에 설치하기" 버튼 노출 → 한 번 탭으로 네이티브 설치
-  - 이미 설치한 사용자(standalone 모드 또는 ?go=1): 즉시 앱으로 리다이렉트
-  - 카톡 등 인앱 브라우저: 즉시 앱으로 (PWA 설치 불가 환경)
+  - 일반 진입: "홈 화면에 바로 설치" 큰 버튼 자동 노출 (PWA 인식되면)
+  - ?install=1 진입: 위 버튼을 펄스 애니메이션으로 강조 + 가운데 안내 화살표
+  - 이미 설치된 PWA (standalone) 또는 인앱 브라우저 또는 ?go=1 → 즉시 앱으로
   
   ↓↓↓ 앱 업데이트로 URL 바뀌면 TARGET_URL 한 줄만 수정 ↓↓↓
 -->
@@ -16,7 +15,6 @@
   <title>나도 PD 있다 · PD 스튜디오</title>
   <meta name="description" content="1인 콘텐츠 창작자를 위한 무료 AI 도구. 파고드림 제작.">
 
-  <!-- PWA 매니페스트 & 메타 -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#B85C38">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -26,7 +24,6 @@
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 
-  <!-- OG / 공유용 -->
   <meta property="og:title" content="나도 PD 있다 · PD 스튜디오">
   <meta property="og:description" content="PD가 당신을 인터뷰하고, 영상 한 편 분량의 모든 결과물을 만들어드려요.">
   <meta property="og:image" content="icon-512.png">
@@ -37,22 +34,20 @@
   <!-- ↑↑↑ 앱 업데이트로 URL 바뀌면 이 한 줄만 수정 ↑↑↑ -->
 
   <script>
-    // ① Service Worker 등록 — PWA 설치 가능 조건 충족 (Chrome 등에서 beforeinstallprompt 이벤트 발생 조건)
+    // Service Worker 등록 — PWA 설치 가능 조건 충족
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(() => {/* SW 등록 실패해도 게이트는 작동 */});
+        navigator.serviceWorker.register('sw.js').catch(() => {});
       });
     }
 
-    // ② 즉시 리다이렉트 조건:
-    //  - 이미 설치된 PWA (standalone 모드) — 홈 아이콘으로 진입
-    //  - 카톡·인스타·페북·라인·네이버·다음 등 인앱 브라우저 (PWA 설치 불가)
-    //  - ?go=1 파라미터 또는 세션 플래그 (사용자가 "앱 바로 시작" 누른 경우)
+    // 즉시 리다이렉트 조건
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
       || window.navigator.standalone === true;
     const isInAppBrowser = /KAKAOTALK|Instagram|FBAN|FBAV|FB_IAB|Line\/|NAVER|Daum/i.test(navigator.userAgent || '');
     const params = new URLSearchParams(window.location.search);
     const skipGate = params.has('go') || sessionStorage.getItem('pd-skip-prompt');
+    const installMode = params.has('install');  // ?install=1 진입 → 설치 강조 모드
 
     if (isStandalone || isInAppBrowser || skipGate) {
       window.location.replace(TARGET_URL);
@@ -111,6 +106,23 @@
       text-align: left;
     }
     .install-pitch strong { font-weight: 800; color: #c1521e; }
+    .install-pitch.install-mode {
+      background: linear-gradient(135deg, rgba(255,107,53,0.18) 0%, rgba(245,181,0,0.18) 100%);
+      border-color: #C1521E;
+      border-width: 2px;
+    }
+    .arrow-down {
+      display: none;
+      font-size: 1.6rem;
+      color: #C1521E;
+      margin: 0.3rem 0 0.5rem;
+      animation: bounce 1.2s ease-in-out infinite;
+    }
+    .arrow-down.show { display: block; }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(8px); }
+    }
     .btn {
       display: block;
       width: 100%;
@@ -130,15 +142,42 @@
       box-shadow: 0 4px 14px rgba(193, 82, 30, 0.3);
       margin-bottom: 0.5rem;
     }
-    .btn-install:hover { background: linear-gradient(135deg, #FF7B45 0%, #D1623E 100%); }
     .btn-install.hidden { display: none; }
+    .btn-install.pulse {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 4px 14px rgba(193, 82, 30, 0.3); }
+      50% { transform: scale(1.04); box-shadow: 0 6px 22px rgba(193, 82, 30, 0.5); }
+    }
     .btn-go {
       background: rgba(184, 92, 56, 0.1);
       color: #B85C38;
       border: 1px solid rgba(184, 92, 56, 0.3);
       font-weight: 700;
     }
-    .btn-go:hover { background: rgba(184, 92, 56, 0.15); }
+    .btn-go.demoted {
+      background: transparent;
+      color: #8a7560;
+      border-color: rgba(138, 117, 96, 0.25);
+      font-size: 0.84rem;
+      font-weight: 600;
+      padding: 0.55rem;
+    }
+    .no-install-hint {
+      display: none;
+      background: rgba(184, 92, 56, 0.06);
+      border: 1px solid rgba(184, 92, 56, 0.2);
+      border-radius: 0.6rem;
+      padding: 0.75rem 0.9rem;
+      margin-top: 0.7rem;
+      font-size: 0.78rem;
+      color: #6c4928;
+      line-height: 1.6;
+      text-align: left;
+    }
+    .no-install-hint.show { display: block; }
+    .no-install-hint strong { font-weight: 700; }
     .manual-hint {
       margin-top: 1rem;
       padding: 0.8rem 0.9rem;
@@ -157,7 +196,6 @@
       font-size: 0.8rem;
     }
     .manual-hint .row { margin-bottom: 0.25rem; }
-    .manual-hint .row:last-child { margin-bottom: 0; }
     .manual-hint strong { font-weight: 700; }
     details summary {
       cursor: pointer;
@@ -188,23 +226,31 @@
     <h1>🎙 나도 PD 있다</h1>
     <p class="tagline">1인 콘텐츠 창작자를 위한 무료 AI 도구</p>
 
-    <!-- 설치 권유 박스 — 첫 진입 사용자에게 가장 강조 -->
-    <div class="install-pitch">
+    <!-- 안내 박스 (install 모드면 강조) -->
+    <div class="install-pitch" id="pitch">
       <strong>📱 홈 화면에 한 번 설치해두세요!</strong><br>
       매번 검색·즐겨찾기 안 해도 폰 홈 아이콘 한 번 탭으로 앱처럼 실행돼요.
     </div>
 
-    <!-- 1순위 — 자동 설치 버튼 (브라우저가 PWA 인식하면 활성화) -->
+    <!-- install 모드일 때만 보이는 화살표 -->
+    <div class="arrow-down" id="arrowDown">⬇</div>
+
+    <!-- 1순위 — 자동 설치 버튼 (PWA 인식 후 노출) -->
     <button class="btn btn-install hidden" id="installBtn">📱 홈 화면에 바로 설치</button>
 
-    <!-- 2순위 — 설치 안 하고 그냥 앱으로 -->
+    <!-- 2순위 — 앱으로 그냥 이동 -->
     <button class="btn btn-go" id="goAppBtn">▶ 일단 앱으로 시작</button>
 
-    <!-- 자동 설치 안 되는 환경 — iOS Safari 등 -->
+    <!-- 설치 prompt가 안 뜨는 환경 안내 (PWA 인식 안 됐을 때 표시) -->
+    <div class="no-install-hint" id="noInstallHint">
+      <strong>설치 버튼이 안 뜨나요?</strong><br>
+      이 브라우저에서는 자동 설치가 지원되지 않거나, 이미 설치된 상태예요. 아래 *수동 설치 방법*을 참고해주세요.
+    </div>
+
     <details>
-      <summary>설치 버튼이 안 보이면 (iOS Safari 등)</summary>
+      <summary>📖 수동으로 홈 화면에 추가하기</summary>
       <div class="manual-hint">
-        <div class="title">📱 수동으로 홈 화면에 추가하기</div>
+        <div class="title">OS별 안내</div>
         <div class="row">🍎 <strong>iOS Safari</strong>: 하단 공유 ⬆ → "홈 화면에 추가"</div>
         <div class="row">📱 <strong>안드로이드 크롬</strong>: ⋮ → "홈 화면에 추가"</div>
         <div class="row">💻 <strong>PC 크롬</strong>: 주소창 오른쪽 ⊕ → "설치"</div>
@@ -217,30 +263,44 @@
   </div>
 
   <script>
+    const goAppBtn = document.getElementById('goAppBtn');
+    const installBtn = document.getElementById('installBtn');
+    const pitch = document.getElementById('pitch');
+    const arrowDown = document.getElementById('arrowDown');
+    const noInstallHint = document.getElementById('noInstallHint');
+
+    // === ?install=1 진입 시: 설치 강조 모드 (안내 박스 + 화살표 + 펄스) ===
+    if (installMode) {
+      pitch.classList.add('install-mode');
+      pitch.innerHTML = '<strong>🎯 설치 페이지에 오셨어요!</strong><br>아래 큰 버튼 한 번 탭으로 홈 화면에 설치돼요.';
+      arrowDown.classList.add('show');
+      goAppBtn.classList.add('demoted');  // "일단 앱으로 시작"은 작게
+      goAppBtn.textContent = '나중에 설치 — 일단 앱만 시작';
+    }
+
     // === "앱 바로 시작" 버튼 ===
-    document.getElementById('goAppBtn').onclick = () => {
+    goAppBtn.onclick = () => {
       sessionStorage.setItem('pd-skip-prompt', '1');
       window.location.replace(TARGET_URL);
     };
 
     // === PWA 자동 설치 (beforeinstallprompt) ===
-    // Chrome/Edge/안드로이드 크롬 등이 PWA 인식하면 이 이벤트 발생.
-    // 우리가 그 prompt를 잡아서 우리 버튼에 연결 → 한 번 탭으로 설치.
     let deferredPrompt = null;
-    const installBtn = document.getElementById('installBtn');
 
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
       installBtn.classList.remove('hidden');
+      // install 모드면 펄스 애니메이션
+      if (installMode) installBtn.classList.add('pulse');
     });
 
     installBtn.onclick = async () => {
       if (!deferredPrompt) return;
-      deferredPrompt.prompt();  // 네이티브 설치 다이얼로그 등장
+      installBtn.classList.remove('pulse');
+      deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
-        // 설치됨 — 사용자가 홈 아이콘으로 다시 열도록 짧은 안내
         installBtn.textContent = '✓ 설치 완료! 잠시 후 앱으로 이동';
         installBtn.style.background = '#3E7B6F';
         sessionStorage.setItem('pd-skip-prompt', '1');
@@ -249,12 +309,20 @@
       deferredPrompt = null;
     };
 
-    // 설치 완료 이벤트 (브라우저에서 직접 ⋮ → 홈 화면 추가한 경우도 포함)
     window.addEventListener('appinstalled', () => {
       sessionStorage.setItem('pd-skip-prompt', '1');
       installBtn.textContent = '✓ 설치 완료!';
       installBtn.style.background = '#3E7B6F';
+      installBtn.classList.remove('pulse');
     });
+
+    // === beforeinstallprompt가 일정 시간 안에 안 뜨면 "수동 설치" 안내 표시 ===
+    // (이미 설치됐거나, 브라우저가 지원 안 하거나, sw 등록 안 된 경우)
+    setTimeout(() => {
+      if (!deferredPrompt && installBtn.classList.contains('hidden')) {
+        noInstallHint.classList.add('show');
+      }
+    }, 2500);
   </script>
 </body>
 </html>
