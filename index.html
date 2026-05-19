@@ -2474,7 +2474,7 @@ const PD_PENDING_CLAUDE_CALLS = {};
 let PD_CLAUDE_IFRAME = null;
 let PD_CLAUDE_IFRAME_READY = false;
 let PD_CLAUDE_MODE = null; // 'direct' | 'iframe' | null (미결정)
-const PD_CLAUDE_IFRAME_SRC = 'https://claude.ai/public/artifacts/264f85bc-5dbf-4201-b189-8ae563862dc8';
+const PD_CLAUDE_IFRAME_SRC = 'https://claude.ai/public/artifacts/f00947cd-bc4e-4682-bf02-f9ae6548d66c';
 
 // 1. 글로벌 postMessage listener — 모든 환경에서 설치 (메시지 type으로 분기)
 // 🛡 Claude.ai artifact 환경과의 충돌 방지: 우리가 만든 proxy iframe(?pd-proxy=1)에서만 외부 호출 응답
@@ -5157,8 +5157,8 @@ function showOnboarding() {
     {
       icon: '🎙',
       iconColor: 'linear-gradient(135deg,#C66A40,#A04F2E)',
-      title: '나도 PD 있다',
-      desc: '답만 하시면 PD가 정리해서 — 썸네일 컨셉 · 제목 · 인트로 · 대본 · 영상 프롬프트 · 쇼츠 · 더보기란 · 다음 에피소드까지 <strong>한 번에 8가지 결과물</strong>을 만들어드려요.',
+      title: '1인 유튜버에게 팀을 주다',
+      desc: '내가 출연자, AI가 PD인 작은 방송국.<br>답만 하시면 PD가 정리해서 — 썸네일 컨셉 · 제목 · 인트로 · 대본 · 영상 프롬프트 · 쇼츠 · 더보기란 · 다음 에피소드까지 <strong>한 번에 8가지 결과물</strong>을 만들어드려요.',
       tag: '1인 창작자를 위한 AI PD 스튜디오',
     },
     {
