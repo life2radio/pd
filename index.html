@@ -1,88 +1,328 @@
 <!DOCTYPE html>
+<!--
+  PD 스튜디오 — GitHub Pages PWA 게이트 페이지
+  
+  - 일반 진입: "홈 화면에 바로 설치" 큰 버튼 자동 노출 (PWA 인식되면)
+  - ?install=1 진입: 위 버튼을 펄스 애니메이션으로 강조 + 가운데 안내 화살표
+  - 이미 설치된 PWA (standalone) 또는 인앱 브라우저 또는 ?go=1 → 즉시 앱으로
+  
+  ↓↓↓ 앱 업데이트로 URL 바뀌면 TARGET_URL 한 줄만 수정 ↓↓↓
+-->
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>나도 PD 있다 · PD 스튜디오</title>
-  <meta name="description" content="1인 유튜버에게 팀을 주다 — 내가 출연자, AI가 PD인 작은 방송국">
-  <meta name="theme-color" content="#B85C38">
+  <meta name="description" content="1인 콘텐츠 창작자를 위한 무료 AI 도구. 파고드림 제작.">
 
-  <!-- OG 태그 (소셜 공유 미리보기) -->
-  <meta property="og:title" content="나도 PD 있다 · PD 스튜디오">
-  <meta property="og:description" content="1인 유튜버에게 팀을 주다 — 내가 출연자, AI가 PD인 작은 방송국">
-  <meta property="og:type" content="website">
-  <meta property="og:locale" content="ko_KR">
-
-  <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icon-192.png">
+  <meta name="theme-color" content="#B85C38">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="PD 스튜디오">
   <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 
-  <!-- TARGET_URL: 새 publish 받으면 이 한 줄만 바꾸면 됨 -->
+  <meta property="og:title" content="나도 PD 있다 · PD 스튜디오">
+  <meta property="og:description" content="PD가 당신을 인터뷰하고, 영상 한 편 분량의 모든 결과물을 만들어드려요.">
+  <meta property="og:image" content="icon-512.png">
+  <meta property="og:type" content="website">
+
+  <!-- ↓↓↓ 앱 업데이트로 URL 바뀌면 이 한 줄만 수정 ↓↓↓ -->
+  <script>const TARGET_URL = 'https://claude.ai/public/artifacts/f00947cd-bc4e-4682-bf02-f9ae6548d66c';</script>
+  <!-- ↑↑↑ 앱 업데이트로 URL 바뀌면 이 한 줄만 수정 ↑↑↑ -->
+
   <script>
-    const TARGET_URL = "https://claude.ai/public/artifacts/f00947cd-bc4e-4682-bf02-f9ae6548d66c";
-    window.location.replace(TARGET_URL);
+    // Service Worker 등록 — PWA 설치 가능 조건 충족
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+
+    // 즉시 리다이렉트 조건
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+    const isInAppBrowser = /KAKAOTALK|Instagram|FBAN|FBAV|FB_IAB|Line\/|NAVER|Daum/i.test(navigator.userAgent || '');
+    const params = new URLSearchParams(window.location.search);
+    const skipGate = params.has('go') || sessionStorage.getItem('pd-skip-prompt');
+    const installMode = params.has('install');  // ?install=1 진입 → 설치 강조 모드
+
+    if (isStandalone || isInAppBrowser || skipGate) {
+      window.location.replace(TARGET_URL);
+    }
   </script>
-  <!-- JS 비활성 시 백업 -->
-  <meta http-equiv="refresh" content="0; url=https://claude.ai/public/artifacts/f00947cd-bc4e-4682-bf02-f9ae6548d66c">
 
   <style>
+    *, *::before, *::after { box-sizing: border-box; }
     body {
       margin: 0;
-      padding: 2rem;
-      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
-      text-align: center;
-      background: #FAF5EA;
-      color: #5C4A3A;
       min-height: 100vh;
+      background: linear-gradient(180deg, #FAF5EA 0%, #F0E4CC 100%);
+      color: #2A1810;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
       display: flex;
-      flex-direction: column;
-      justify-content: center;
       align-items: center;
+      justify-content: center;
+      padding: 1.5rem 1rem;
+      line-height: 1.6;
+    }
+    .box {
+      max-width: 420px;
+      width: 100%;
+      background: white;
+      border-radius: 1.2rem;
+      box-shadow: 0 8px 24px rgba(184, 92, 56, 0.12), 0 2px 6px rgba(0,0,0,0.04);
+      padding: 1.8rem 1.5rem 1.5rem;
+      text-align: center;
+    }
+    .icon {
+      width: 88px; height: 88px;
+      margin: 0 auto 0.8rem;
+      border-radius: 1.2rem;
+      box-shadow: 0 4px 12px rgba(184, 92, 56, 0.25);
     }
     h1 {
-      font-size: 1.15rem;
+      font-size: 1.3rem;
       color: #B85C38;
-      margin: 0 0 1rem;
+      margin: 0 0 0.35rem;
       font-weight: 800;
     }
-    .spinner {
-      width: 40px;
-      height: 40px;
-      margin: 1rem 0;
-      border: 3px solid rgba(184, 92, 56, 0.18);
-      border-top-color: #B85C38;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+    .tagline {
+      font-size: 0.86rem;
+      color: #5C4A3A;
+      margin: 0 0 1.4rem;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-text {
-      font-size: 0.9rem;
-      margin: 0.5rem 0;
+    .install-pitch {
+      background: linear-gradient(135deg, rgba(255,107,53,0.08) 0%, rgba(245,181,0,0.08) 100%);
+      border: 1.5px solid rgba(255,107,53,0.25);
+      border-radius: 0.8rem;
+      padding: 0.85rem 0.95rem;
+      margin-bottom: 1rem;
+      font-size: 0.82rem;
+      color: #7a4218;
+      line-height: 1.65;
+      text-align: left;
     }
-    .fallback {
-      font-size: 0.8rem;
-      color: #8A7058;
-      margin-top: 1.5rem;
+    .install-pitch strong { font-weight: 800; color: #c1521e; }
+    .install-pitch.install-mode {
+      background: linear-gradient(135deg, rgba(255,107,53,0.18) 0%, rgba(245,181,0,0.18) 100%);
+      border-color: #C1521E;
+      border-width: 2px;
     }
-    .fallback a {
+    .arrow-down {
+      display: none;
+      font-size: 1.6rem;
+      color: #C1521E;
+      margin: 0.3rem 0 0.5rem;
+      animation: bounce 1.2s ease-in-out infinite;
+    }
+    .arrow-down.show { display: block; }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(8px); }
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 0.95rem 1rem;
+      border-radius: 0.65rem;
+      font-size: 1rem;
+      font-weight: 800;
+      font-family: inherit;
+      border: 0;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.15s, background 0.15s;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-install {
+      background: linear-gradient(135deg, #FF6B35 0%, #C1521E 100%);
+      color: white;
+      box-shadow: 0 4px 14px rgba(193, 82, 30, 0.3);
+      margin-bottom: 0.5rem;
+    }
+    .btn-install.hidden { display: none; }
+    .btn-install.pulse {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 4px 14px rgba(193, 82, 30, 0.3); }
+      50% { transform: scale(1.04); box-shadow: 0 6px 22px rgba(193, 82, 30, 0.5); }
+    }
+    .btn-go {
+      background: rgba(184, 92, 56, 0.1);
       color: #B85C38;
+      border: 1px solid rgba(184, 92, 56, 0.3);
       font-weight: 700;
+    }
+    .btn-go.demoted {
+      background: transparent;
+      color: #8a7560;
+      border-color: rgba(138, 117, 96, 0.25);
+      font-size: 0.84rem;
+      font-weight: 600;
+      padding: 0.55rem;
+    }
+    .no-install-hint {
+      display: none;
+      background: rgba(184, 92, 56, 0.06);
+      border: 1px solid rgba(184, 92, 56, 0.2);
+      border-radius: 0.6rem;
+      padding: 0.75rem 0.9rem;
+      margin-top: 0.7rem;
+      font-size: 0.78rem;
+      color: #6c4928;
+      line-height: 1.6;
+      text-align: left;
+    }
+    .no-install-hint.show { display: block; }
+    .no-install-hint strong { font-weight: 700; }
+    .manual-hint {
+      margin-top: 1rem;
+      padding: 0.8rem 0.9rem;
+      background: rgba(245, 181, 0, 0.06);
+      border: 1px solid rgba(245, 181, 0, 0.22);
+      border-radius: 0.55rem;
+      font-size: 0.76rem;
+      color: #6c5018;
+      line-height: 1.65;
+      text-align: left;
+    }
+    .manual-hint .title {
+      font-weight: 700;
+      color: #7a5818;
+      margin-bottom: 0.4rem;
+      font-size: 0.8rem;
+    }
+    .manual-hint .row { margin-bottom: 0.25rem; }
+    .manual-hint strong { font-weight: 700; }
+    details summary {
+      cursor: pointer;
+      list-style: none;
+      font-size: 0.78rem;
+      color: #8a7560;
+      padding: 0.3rem 0;
+      margin-top: 0.6rem;
       text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    details summary::-webkit-details-marker { display: none; }
+    .credit {
+      margin-top: 1.2rem;
+      font-size: 0.75rem;
+      color: #8a7560;
+    }
+    .credit a {
+      color: #B85C38;
+      font-weight: 600;
+      text-decoration: none;
     }
   </style>
 </head>
 <body>
-  <h1>🎙 나도 PD 있다</h1>
-  <div class="spinner"></div>
-  <p class="loading-text">PD 스튜디오 여는 중...</p>
-  <p class="fallback">자동으로 이동하지 않으면 <a href="https://claude.ai/public/artifacts/f00947cd-bc4e-4682-bf02-f9ae6548d66c">여기를 눌러주세요</a></p>
+  <div class="box">
+    <img src="icon-192.png" class="icon" alt="PD 스튜디오 아이콘">
+    <h1>🎙 나도 PD 있다</h1>
+    <p class="tagline">1인 콘텐츠 창작자를 위한 무료 AI 도구</p>
+
+    <!-- 안내 박스 (install 모드면 강조) -->
+    <div class="install-pitch" id="pitch">
+      <strong>📱 홈 화면에 한 번 설치해두세요!</strong><br>
+      매번 검색·즐겨찾기 안 해도 폰 홈 아이콘 한 번 탭으로 앱처럼 실행돼요.
+    </div>
+
+    <!-- install 모드일 때만 보이는 화살표 -->
+    <div class="arrow-down" id="arrowDown">⬇</div>
+
+    <!-- 1순위 — 자동 설치 버튼 (PWA 인식 후 노출) -->
+    <button class="btn btn-install hidden" id="installBtn">📱 홈 화면에 바로 설치</button>
+
+    <!-- 2순위 — 앱으로 그냥 이동 -->
+    <button class="btn btn-go" id="goAppBtn">▶ 일단 앱으로 시작</button>
+
+    <!-- 설치 prompt가 안 뜨는 환경 안내 (PWA 인식 안 됐을 때 표시) -->
+    <div class="no-install-hint" id="noInstallHint">
+      <strong>설치 버튼이 안 뜨나요?</strong><br>
+      이 브라우저에서는 자동 설치가 지원되지 않거나, 이미 설치된 상태예요. 아래 *수동 설치 방법*을 참고해주세요.
+    </div>
+
+    <details>
+      <summary>📖 수동으로 홈 화면에 추가하기</summary>
+      <div class="manual-hint">
+        <div class="title">OS별 안내</div>
+        <div class="row">🍎 <strong>iOS Safari</strong>: 하단 공유 ⬆ → "홈 화면에 추가"</div>
+        <div class="row">📱 <strong>안드로이드 크롬</strong>: ⋮ → "홈 화면에 추가"</div>
+        <div class="row">💻 <strong>PC 크롬</strong>: 주소창 오른쪽 ⊕ → "설치"</div>
+      </div>
+    </details>
+
+    <div class="credit">
+      🎙 <a href="https://www.youtube.com/@pagodream" target="_blank" rel="noopener">파고드림 채널</a> 제작
+    </div>
+  </div>
 
   <script>
-    // PWA Service Worker 등록 (브라우저가 이 페이지를 PWA로 인식 → beforeinstallprompt 발동)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
+    const goAppBtn = document.getElementById('goAppBtn');
+    const installBtn = document.getElementById('installBtn');
+    const pitch = document.getElementById('pitch');
+    const arrowDown = document.getElementById('arrowDown');
+    const noInstallHint = document.getElementById('noInstallHint');
+
+    // === ?install=1 진입 시: 설치 강조 모드 (안내 박스 + 화살표 + 펄스) ===
+    if (installMode) {
+      pitch.classList.add('install-mode');
+      pitch.innerHTML = '<strong>🎯 설치 페이지에 오셨어요!</strong><br>아래 큰 버튼 한 번 탭으로 홈 화면에 설치돼요.';
+      arrowDown.classList.add('show');
+      goAppBtn.classList.add('demoted');  // "일단 앱으로 시작"은 작게
+      goAppBtn.textContent = '나중에 설치 — 일단 앱만 시작';
     }
+
+    // === "앱 바로 시작" 버튼 ===
+    goAppBtn.onclick = () => {
+      sessionStorage.setItem('pd-skip-prompt', '1');
+      window.location.replace(TARGET_URL);
+    };
+
+    // === PWA 자동 설치 (beforeinstallprompt) ===
+    let deferredPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.classList.remove('hidden');
+      // install 모드면 펄스 애니메이션
+      if (installMode) installBtn.classList.add('pulse');
+    });
+
+    installBtn.onclick = async () => {
+      if (!deferredPrompt) return;
+      installBtn.classList.remove('pulse');
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        installBtn.textContent = '✓ 설치 완료! 잠시 후 앱으로 이동';
+        installBtn.style.background = '#3E7B6F';
+        sessionStorage.setItem('pd-skip-prompt', '1');
+        setTimeout(() => window.location.replace(TARGET_URL), 1200);
+      }
+      deferredPrompt = null;
+    };
+
+    window.addEventListener('appinstalled', () => {
+      sessionStorage.setItem('pd-skip-prompt', '1');
+      installBtn.textContent = '✓ 설치 완료!';
+      installBtn.style.background = '#3E7B6F';
+      installBtn.classList.remove('pulse');
+    });
+
+    // === beforeinstallprompt가 일정 시간 안에 안 뜨면 "수동 설치" 안내 표시 ===
+    // (이미 설치됐거나, 브라우저가 지원 안 하거나, sw 등록 안 된 경우)
+    setTimeout(() => {
+      if (!deferredPrompt && installBtn.classList.contains('hidden')) {
+        noInstallHint.classList.add('show');
+      }
+    }, 2500);
   </script>
 </body>
 </html>
