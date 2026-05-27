@@ -52,7 +52,9 @@
     const skipGate = params.has('go') || sessionStorage.getItem('pd-skip-prompt');
     const installMode = params.has('install');  // ?install=1 진입 → 설치 강조 모드
 
-    if (isStandalone || isInAppBrowser || skipGate) {
+    // 즉시 리다이렉트 조건 — 카톡 등 인앱브라우저는 "무조건" 제외!
+    // (인앱브라우저는 구글 로그인이 막히므로, PWA/skip 조건이어도 절대 redirect 안 함 → body에서 "크롬으로 열기" 안내)
+    if (!isInAppBrowser && (isStandalone || skipGate)) {
       window.location.replace(TARGET_URL);
     }
   </script>
@@ -251,12 +253,48 @@
       min-height: 1rem;
       font-weight: 600;
     }
+    /* 인앱브라우저 안내 */
+    .inapp-notice {
+      background: rgba(245,181,0,0.12);
+      border: 1px solid rgba(245,181,0,0.4);
+      border-radius: 0.65rem;
+      padding: 0.9rem 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+      color: #7a5818;
+      line-height: 1.6;
+    }
+    .inapp-notice strong { color: #5a4010; }
+    .inapp-ios-hint {
+      margin-top: 0.9rem;
+      padding: 0.8rem 0.9rem;
+      background: rgba(92,74,58,0.05);
+      border-radius: 0.55rem;
+      font-size: 0.8rem;
+      color: #6a5645;
+      line-height: 1.6;
+    }
+    .inapp-ios-hint strong { color: #4a3828; }
   </style>
 </head>
 <body>
   <div class="box">
     <img src="icon-192.png" class="icon" alt="PD 스튜디오 아이콘">
     <h1>🎙 나도 PD 있다</h1>
+
+    <!-- ===== 카톡 등 인앱브라우저 안내 섹션 ===== -->
+    <div id="inappSection" style="display:none;">
+      <p class="tagline">나만의 AI 제작팀을 만나보세요</p>
+      <div class="inapp-notice">
+        <strong>⚠️ 잠깐! 크롬·사파리로 열어주세요</strong><br>
+        카톡·인스타 등 앱 안에서는 <strong>구글 로그인이 막혀</strong> 정상 작동하지 않아요. 아래 버튼으로 열어주세요.
+      </div>
+      <button class="btn btn-install" id="openChromeBtn" style="margin-bottom:0.7rem;">🚀 크롬에서 열기</button>
+      <div class="inapp-ios-hint" id="iosHint">
+        <strong>📱 아이폰이라면</strong><br>
+        오른쪽 위 <strong>⋯ (또는 공유 ⬆)</strong> → <strong>"기본 브라우저(Safari)로 열기"</strong>를 눌러주세요.
+      </div>
+    </div>
 
     <!-- ===== 이메일 수집 섹션 (처음 진입 시) ===== -->
     <div id="emailSection">
@@ -319,18 +357,55 @@
     // ===== 이메일 수집 → 설치 안내 화면 전환 =====
     const emailSection = document.getElementById('emailSection');
     const installSection = document.getElementById('installSection');
+    const inappSection = document.getElementById('inappSection');
     const emailInput = document.getElementById('emailInput');
     const emailSubmit = document.getElementById('emailSubmit');
     const emailErr = document.getElementById('emailErr');
 
-    // 이미 이메일을 제출한 사람, 또는 설치 강조 모드(?install=1)는 곧장 설치 안내 화면으로
-    const emailDone = localStorage.getItem('pd-email-done');
-    if (emailDone || installMode) {
+    // 환경 헬퍼 (head 변수에 의존하지 않고 body에서 독립 재계산 — 스코프 문제 차단)
+    const ua = navigator.userAgent || '';
+    const isAndroid = /Android/i.test(ua);
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
+    const inAppBrowser = /KAKAOTALK|Instagram|FBAN|FBAV|FB_IAB|Line\/|NAVER|Daum/i.test(ua);
+
+    // ===== 카톡 등 인앱브라우저면 — "크롬으로 열기" 안내 우선 (Claude.ai로 안 보냄) =====
+    if (inAppBrowser) {
+      inappSection.style.display = 'block';
       emailSection.style.display = 'none';
-      installSection.style.display = 'block';
-    } else {
-      emailSection.style.display = 'block';
       installSection.style.display = 'none';
+
+      const openChromeBtn = document.getElementById('openChromeBtn');
+      const iosHint = document.getElementById('iosHint');
+
+      // iOS는 자동 탈출 불가 → 버튼 숨기고 수동 안내만 강조
+      if (isIOS) {
+        openChromeBtn.style.display = 'none';
+      } else {
+        iosHint.style.display = 'none';
+      }
+
+      openChromeBtn.onclick = () => {
+        // 안드로이드: intent로 크롬에서 게이트 URL 열기 (파라미터 없이 → 이메일 화면부터 정상)
+        const targetPath = 'life2radio.github.io/pd/';
+        const fallbackUrl = 'https://' + targetPath;
+        if (isAndroid) {
+          const intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(fallbackUrl) + ';end';
+          try { window.location.href = intentUrl; }
+          catch (e) { window.location.href = fallbackUrl; }
+        } else {
+          window.location.href = fallbackUrl;
+        }
+      };
+    } else {
+      // 이미 이메일을 제출한 사람, 또는 설치 강조 모드(?install=1)는 곧장 설치 안내 화면으로
+      const emailDone = localStorage.getItem('pd-email-done');
+      if (emailDone || installMode) {
+        emailSection.style.display = 'none';
+        installSection.style.display = 'block';
+      } else {
+        emailSection.style.display = 'block';
+        installSection.style.display = 'none';
+      }
     }
 
     function validEmail(v) {
