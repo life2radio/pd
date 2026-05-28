@@ -52,8 +52,33 @@
     const skipGate = params.has('go') || sessionStorage.getItem('pd-skip-prompt');
     const installMode = params.has('install');  // ?install=1 진입 → 설치 강조 모드
 
-    if (isStandalone || isInAppBrowser || skipGate) {
+    // === Universal Link 회피 — Claude 모바일 앱이 가로채는 거 막고 브라우저에서 열기 ===
+    // 안드로이드: intent URL로 Chrome 강제. iOS: 새 탭으로 (Universal Link 부분 회피).
+    function smartRedirect(url) {
+      const ua = navigator.userAgent || '';
+      // 안드로이드 Chrome — intent URL로 Chrome 명시적 호출
+      if (/Android/i.test(ua) && /Chrome/i.test(ua) && !/wv/i.test(ua)) {
+        const pathPart = url.replace(/^https?:\/\//, '');
+        const intentUrl = 'intent://' + pathPart + '#Intent;package=com.android.chrome;scheme=https;end';
+        window.location.href = intentUrl;
+        return;
+      }
+      // iOS — 새 탭 (target=_blank + noopener는 Universal Link 처리 안 됨, 보통)
+      if (/iPhone|iPad|iPod/i.test(ua)) {
+        const newTab = window.open(url, '_blank', 'noopener,noreferrer');
+        if (newTab) return;
+        // 팝업 차단 fallback
+      }
+      // 데스크탑/기타 — 같은 탭
+      window.location.href = url;
+    }
+
+    if (isStandalone || isInAppBrowser) {
+      // PWA 안 또는 카톡/인스타 WebView — Universal Link 가로채기 없음, 그대로 replace
       window.location.replace(TARGET_URL);
+    } else if (skipGate) {
+      // 일반 브라우저에서 재방문 — Universal Link 회피 적용
+      smartRedirect(TARGET_URL);
     }
   </script>
 
@@ -389,7 +414,12 @@
     // === "앱 바로 시작" 버튼 ===
     goAppBtn.onclick = () => {
       sessionStorage.setItem('pd-skip-prompt', '1');
-      window.location.replace(TARGET_URL);
+      // PWA standalone 안에서는 그대로 replace (PWA 유지), 그 외 Universal Link 회피
+      if (isStandalone || isInAppBrowser) {
+        window.location.replace(TARGET_URL);
+      } else {
+        smartRedirect(TARGET_URL);
+      }
     };
 
     // === PWA 자동 설치 (beforeinstallprompt) ===
