@@ -73,9 +73,12 @@
       window.location.href = url;
     }
 
-    if (isStandalone || isInAppBrowser) {
-      // PWA 안 또는 카톡/인스타 WebView — Universal Link 가로채기 없음, 그대로 replace
+    if (isStandalone) {
+      // PWA 안 — 그대로 replace (Universal Link 가로채기 없음)
       window.location.replace(TARGET_URL);
+    } else if (isInAppBrowser) {
+      // 카톡/인스타/라인 등 인앱 브라우저 — 절대 redirect 안 함!
+      // body에서 "크롬에서 열기" 안내(inappSection) 표시 → 거기서 크롬으로 탈출
     } else if (skipGate) {
       // 일반 브라우저에서 재방문 — Universal Link 회피 적용
       smartRedirect(TARGET_URL);
@@ -283,6 +286,18 @@
     <img src="icon-192.png" class="icon" alt="PD 스튜디오 아이콘">
     <h1>🎙 나도 PD 있다</h1>
 
+    <!-- ===== 인앱 브라우저(카톡/인스타 등) 안내 섹션 ===== -->
+    <div id="inappSection" style="display:none;">
+      <p class="tagline">카톡 안에서는 로그인이 제한돼요 😢<br>크롬·사파리에서 열어야 정상 작동해요</p>
+      <button class="btn btn-install" id="openChromeBtn" style="margin-bottom:0.8rem;">🚀 크롬에서 열기</button>
+      <div class="manual-hint" id="iosInappHint" style="display:none;">
+        <div class="title">📱 아이폰이신가요?</div>
+        <div class="row">화면 오른쪽 위(또는 아래)의 <strong>메뉴 버튼(⋯ 또는 공유)</strong>을 누르고,</div>
+        <div class="row"><strong>"Safari로 열기"</strong> 또는 <strong>"다른 브라우저로 열기"</strong>를 선택해주세요.</div>
+      </div>
+      <p class="email-hint" style="margin-top:1rem;">크롬·사파리로 열면 이메일을 남기고 바로 시작할 수 있어요.</p>
+    </div>
+
     <!-- ===== 이메일 수집 섹션 (처음 진입 시) ===== -->
     <div id="emailSection">
       <p class="tagline">1인 유튜버에게 팀을 주다<br>시작하려면 이메일을 남겨주세요</p>
@@ -350,7 +365,43 @@
 
     // 이미 이메일을 제출한 사람, 또는 설치 강조 모드(?install=1)는 곧장 설치 안내 화면으로
     const emailDone = localStorage.getItem('pd-email-done');
-    if (emailDone || installMode) {
+    const inappSection = document.getElementById('inappSection');
+
+    if (isInAppBrowser) {
+      // ===== 카톡/인스타/라인 등 인앱 브라우저 — "크롬에서 열기" 안내만 표시 =====
+      // (인앱 브라우저에서는 구글 로그인 OAuth가 차단되므로 반드시 외부 브라우저로 탈출시켜야 함)
+      emailSection.style.display = 'none';
+      installSection.style.display = 'none';
+      if (inappSection) inappSection.style.display = 'block';
+
+      const _ua = navigator.userAgent || '';
+      const _isAndroid = /Android/i.test(_ua);
+      const _isIOS = /iPhone|iPad|iPod/i.test(_ua);
+      const openChromeBtn = document.getElementById('openChromeBtn');
+      const iosInappHint = document.getElementById('iosInappHint');
+
+      // iOS는 자동 탈출 불가 → 버튼 숨기고 수동 안내만, 안드로이드는 버튼 보이고 안내 숨김
+      if (_isIOS) {
+        if (openChromeBtn) openChromeBtn.style.display = 'none';
+        if (iosInappHint) iosInappHint.style.display = 'block';
+      } else {
+        if (iosInappHint) iosInappHint.style.display = 'none';
+      }
+
+      if (openChromeBtn) openChromeBtn.onclick = () => {
+        // 안드로이드: intent로 크롬에서 게이트 URL 열기 (파라미터 없이 → 이메일 화면부터 정상)
+        // ★ S.browser_fallback_url — intent 실패 시 자동으로 크롬으로 폴백 (이게 핵심!)
+        const targetPath = 'life2radio.github.io/pd/';
+        const fallbackUrl = 'https://' + targetPath;
+        if (_isAndroid) {
+          const intentUrl = 'intent://' + targetPath + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(fallbackUrl) + ';end';
+          try { window.location.href = intentUrl; }
+          catch (e) { window.location.href = fallbackUrl; }
+        } else {
+          window.location.href = fallbackUrl;
+        }
+      };
+    } else if (emailDone || installMode) {
       emailSection.style.display = 'none';
       installSection.style.display = 'block';
     } else {
@@ -415,7 +466,8 @@
     goAppBtn.onclick = () => {
       sessionStorage.setItem('pd-skip-prompt', '1');
       // PWA standalone 안에서는 그대로 replace (PWA 유지), 그 외 Universal Link 회피
-      if (isStandalone || isInAppBrowser) {
+      // (카톡 등 인앱 브라우저는 inappSection만 보여서 이 버튼 자체가 노출 안 됨)
+      if (isStandalone) {
         window.location.replace(TARGET_URL);
       } else {
         smartRedirect(TARGET_URL);
