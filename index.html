@@ -30,7 +30,7 @@
   <meta property="og:type" content="website">
 
   <!-- ↓↓↓ 앱 업데이트로 URL 바뀌면 이 한 줄만 수정 ↓↓↓ -->
-  <script>const TARGET_URL = 'https://claude.ai/public/artifacts/7df1f59e-a1df-4855-a0a4-c7ffab63deb7';</script>
+  <script>const TARGET_URL = 'https://claude.ai/public/artifacts/ea669bd3-a69d-43c0-8a60-a37be39d395d';</script>
   <!-- ↑↑↑ 앱 업데이트로 URL 바뀌면 이 한 줄만 수정 ↑↑↑ -->
 
   <!-- 이메일 수집 — Google Apps Script 웹 앱 URL -->
@@ -56,15 +56,19 @@
     // 안드로이드: intent URL로 Chrome 강제. iOS: 새 탭으로 (Universal Link 부분 회피).
     function smartRedirect(url) {
       const ua = navigator.userAgent || '';
-      // 안드로이드 Chrome — intent URL로 Chrome 명시적 호출
-      if (/Android/i.test(ua) && /Chrome/i.test(ua) && !/wv/i.test(ua)) {
+      const isAndroid = /Android/i.test(ua);
+      const isIOS = /iPhone|iPad|iPod/i.test(ua);
+      // 안드로이드 — intent URL로 Chrome 명시적 호출 (Claude 모바일 앱 가로채기 회피)
+      // ★ S.browser_fallback_url — intent 실패 시 자동 폴백 (이게 핵심!)
+      if (isAndroid) {
         const pathPart = url.replace(/^https?:\/\//, '');
-        const intentUrl = 'intent://' + pathPart + '#Intent;package=com.android.chrome;scheme=https;end';
-        window.location.href = intentUrl;
+        const intentUrl = 'intent://' + pathPart + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(url) + ';end';
+        try { window.location.href = intentUrl; }
+        catch (e) { window.location.href = url; }
         return;
       }
       // iOS — 새 탭 (target=_blank + noopener는 Universal Link 처리 안 됨, 보통)
-      if (/iPhone|iPad|iPod/i.test(ua)) {
+      if (isIOS) {
         const newTab = window.open(url, '_blank', 'noopener,noreferrer');
         if (newTab) return;
         // 팝업 차단 fallback
@@ -323,8 +327,8 @@
     <!-- 1순위 — 자동 설치 버튼 (PWA 인식 후 노출) -->
     <button class="btn btn-install hidden" id="installBtn">📱 홈 화면에 바로 설치</button>
 
-    <!-- 2순위 — 앱으로 그냥 이동 -->
-    <button class="btn btn-go" id="goAppBtn">▶ 일단 앱으로 시작</button>
+    <!-- 2순위 — 크롬 웹에서 그냥 사용 (앱 설치 안 함) -->
+    <button class="btn btn-go" id="goAppBtn">🌐 크롬에서 바로 시작</button>
 
     <!-- 설치 prompt가 안 뜨는 환경 안내 (PWA 인식 안 됐을 때 표시) -->
     <div class="no-install-hint" id="noInstallHint">
@@ -458,8 +462,8 @@
       pitch.classList.add('install-mode');
       pitch.innerHTML = '<strong>🎯 설치 페이지에 오셨어요!</strong><br>아래 큰 버튼 한 번 탭으로 홈 화면에 설치돼요.';
       arrowDown.classList.add('show');
-      goAppBtn.classList.add('demoted');  // "일단 앱으로 시작"은 작게
-      goAppBtn.textContent = '나중에 설치 — 일단 앱만 시작';
+      goAppBtn.classList.add('demoted');  // "크롬에서 시작"은 작게
+      goAppBtn.textContent = '나중에 설치 — 크롬에서 바로 시작';
     }
 
     // === "앱 바로 시작" 버튼 ===
